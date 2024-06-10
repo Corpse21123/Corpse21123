@@ -1,0 +1,109 @@
+local player = game.Players.LocalPlayer
+local mouse = player:GetMouse()
+local espEnabled = false
+
+-- ฟังก์ชั่นการสร้าง GUI แบบ BillboardGui
+local function createBillboardGui(part)
+    local billboardGui = Instance.new("BillboardGui")
+    billboardGui.Name = "BillboardGui"
+    billboardGui.Adornee = part
+    billboardGui.Size = UDim2.new(0, 50, 0, 25)
+    billboardGui.StudsOffset = Vector3.new(0, 2, 0)
+    billboardGui.AlwaysOnTop = true
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Parent = billboardGui
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = part.Name
+    textLabel.TextColor3 = Color3.new(0, 0, 1) -- สีน้ำเงิน
+    textLabel.TextScaled = true
+    textLabel.TextSize = 14
+
+    billboardGui.Parent = part
+end
+
+-- ฟังก์ชั่นการสร้างไฮไลท์
+local function createHighlight(part)
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "Highlight"
+    highlight.Adornee = part
+    highlight.FillColor = Color3.fromRGB(255, 255, 0) -- สีเหลือง
+    highlight.FillTransparency = 0.5
+    highlight.OutlineColor = Color3.fromRGB(255, 0, 0) -- สีแดง
+    highlight.OutlineTransparency = 0
+    highlight.Parent = part
+end
+
+-- ฟังก์ชั่นการลบ GUI และไฮไลท์เก่าออกถ้ามี
+local function clearOldBillboardGuisAndHighlights()
+    for _, obj in pairs(game.Workspace:GetDescendants()) do
+        if obj:IsA("BillboardGui") or obj:IsA("Highlight") then
+            if obj.Name == "BillboardGui" or obj.Name == "Highlight" then 
+                obj:Destroy()
+            end
+        end
+    end
+end
+
+-- ฟังก์ชั่นการสร้าง ESP สำหรับ Part ที่คลิก
+local function createESP(target)
+    if target and target:IsA("BasePart") then -- ตรวจสอบว่า target มีค่าและเป็น BasePart
+        clearOldBillboardGuisAndHighlights()
+        for _, obj in pairs(game.Workspace:GetDescendants()) do
+            if obj:IsA(target.ClassName) and obj.Name == target.Name then
+                createBillboardGui(obj)
+                createHighlight(obj)
+            end
+        end
+    end
+end
+
+-- ฟังก์ชั่นการกดปุ่ม Z เพื่อเปิด ESP
+local function onKeyPress(input, gameProcessedEvent)
+    if not gameProcessedEvent then
+        if input.KeyCode == Enum.KeyCode.LeftBracket then
+            espEnabled = not espEnabled
+            if not espEnabled then
+                clearOldBillboardGuisAndHighlights()
+            end
+            print("ESP " .. (espEnabled and "enabled" or "disabled"))
+        elseif input.KeyCode == Enum.KeyCode.Z and espEnabled then
+            local target = mouse.Target
+            print("Attempting to create ESP for target:", target) -- เพิ่มบรรทัดนี้เพื่อตรวจสอบ target
+            createESP(target)
+        end
+    end
+end
+
+-- Function to highlight NPCs
+local function highlightNPC(character)
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "NPCHighlight" 
+    highlight.FillColor = Color3.fromRGB(128, 0, 128) -- สีม่วง
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255) -- สีขาว
+    highlight.Parent = character
+end
+
+-- Initial highlighting of existing NPCs
+for _, item in pairs(workspace:GetDescendants()) do
+    if item:IsA("Humanoid") then
+        local parent = item.Parent
+        if parent and not game.Players:GetPlayerFromCharacter(parent) then
+            highlightNPC(parent)
+        end
+    end
+end
+
+-- Highlight newly added NPCs
+workspace.DescendantAdded:Connect(function(item)
+    if item:IsA("Humanoid") then
+        local parent = item.Parent
+        if parent and not game.Players:GetPlayerFromCharacter(parent) then
+            highlightNPC(parent)
+        end
+    end
+end)
+
+-- เชื่อมต่อฟังก์ชั่นกับเหตุการณ์การกดปุ่ม
+game:GetService("UserInputService").InputBegan:Connect(onKeyPress)
